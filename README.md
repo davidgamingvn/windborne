@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Windborne
+
+A 3D interactive globe visualization of stratospheric balloon positions in real-time. Built with Next.js and Three.js.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **3D Globe View**: Interactive Three.js globe showing balloon positions with altitude-based coloring
+- **Real-Time Data**: Fetches balloon positions from Windborne's API at different time offsets
+- **Geolocation**: Automatically displays the country where the balloon is flying over
+- **Light/Dark Mode**: Themed visualization with dynamic globe coloring
+- **Filters & Controls**: Altitude range filtering, time offset selection
 
-## Learn More
+## Public APIs Used
 
-To learn more about Next.js, take a look at the following resources:
+| API                          | Purpose                                        |
+| ---------------------------- | ---------------------------------------------- |
+| **Windborne Treasure API**   | Real balloon position and altitude data        |
+| **GeoJSON World Boundaries** | Country border lines on the globe              |
+| **Turf.js**                  | Geospatial calculations and fallback geocoding |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## How It Works
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. **Windborne API**
 
-## Deploy on Vercel
+- The app queries: `https://a.windbornesystems.com/treasure/?offset=0` (where offset is hours ago)
+- Returns: Array of balloons with `lat`, `lon`, and `alt` (altitude in km)
+- A Next.js API route (`/api/balloon/[offset]`) proxies this to avoid CORS issues
+- Data is stored in a Zustand store and cleaned on arrival
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 2. **Geolocation Implementation**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+When you hover over a balloon, the app:
+
+1. Takes the balloon's coordinates
+2. Gets the geolocation
+3. Falls back to **Turf.js** (local processing) if API is slow
+4. Displays the result
+
+**To modify geolocation behavior**, edit `lib/utils/geocoding.ts`:
+
+- Add/remove country flags: `COUNTRY_FLAGS` object
+- Adjust fallback logic in `getGeolocationData()` function
+
+### 3. **Displaying on the 3D Globe**
+
+- **Balloons appear as colored spheres** positioned at their lat/lon coordinates
+- **Color depends on altitude**:
+  - Gold: Stratosphere (>25 km)
+  - Dark Gold: Upper Troposphere (10-25 km)
+  - Brown: Lower Troposphere (<10 km)
+- **Map lines** show country borders in contrasting colors
+- The entire globe rotates automatically; drag to manually rotate
+
+**To customize globe appearance**, edit `components/Globe/GlobeCanvas.tsx`:
+
+- Change balloon colors: Modify `BALLOON_COLORS` in `lib/constants.ts`
+- Change sphere size: Adjust `0.15` in geometry creation
+- Change atmosphere glow: Modify opacity and color in `atmosphereMaterial`
+
+## Build & Deploy
+
+```bash
+npm run build
+npm start
+```
